@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>محاكي التوزيع الإلكتروني والجدول الدوري</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts: Cairo & Orbitron -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        atomDark: '#0b0f19',
+                        atomCard: '#131b2e',
+                        atomAccent: '#00f2fe',
+                        atomPink: '#4facfe',
+                        lcdBg: '#1e3a1e',
+                        lcdText: '#7cfc00',
+                    },
+                    fontFamily: {
+                        cairo: ['Cairo', 'sans-serif'],
+                        orbitron: ['Orbitron', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #070a12;
+            color: #e2e8f0;
+            font-family: 'Cairo', sans-serif;
+            background-image: 
+                radial-gradient(circle at 15% 20%, rgba(0, 242, 254, 0.08) 0%, transparent 40%),
+                radial-gradient(circle at 85% 80%, rgba(79, 172, 254, 0.08) 0%, transparent 40%);
+        }
+
+        /* Atomic Glow Effects */
+        .glow-cyan {
+            box-shadow: 0 0 20px rgba(0, 242, 254, 0.35);
+        }
+        .glow-pink {
+            box-shadow: 0 0 20px rgba(79, 172, 254, 0.35);
+        }
+        .text-glow {
+            text-shadow: 0 0 10px rgba(0, 242, 254, 0.6);
+        }
+        .lcd-glow {
+            text-shadow: 0 0 6px rgba(124, 252, 0, 0.8);
+        }
+
+        /* LED Styles */
+        .led-off {
+            background-color: #1a2332;
+            border: 2px solid #2a364f;
+            box-shadow: inset 0 0 5px rgba(0,0,0,0.8);
+        }
+        .led-on {
+            background: radial-gradient(circle at 30% 30%, #00f2fe, #0077ff);
+            border: 2px solid #a5f3fc;
+            box-shadow: 0 0 12px #00f2fe, 0 0 25px #00f2fe;
+        }
+
+        /* Orbit Canvas Animation CSS Helpers */
+        .orbit-ring {
+            border: 1px dashed rgba(0, 242, 254, 0.3);
+            border-radius: 50%;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        /* LCD Screen Emulation */
+        .lcd-screen {
+            background-color: #0d230d;
+            border: 4px solid #1a381a;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.9), 0 0 15px rgba(124, 252, 0, 0.2);
+            font-family: 'Courier New', Courier, monospace;
+            color: #7cfc00;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0b0f19;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1e293b;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #00f2fe;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between p-3 md:p-6">
+
+    <!-- Header Section -->
+    <header class="max-w-7xl w-full mx-auto mb-6 flex flex-col md:flex-row items-center justify-between border-b border-cyan-900/40 pb-4 gap-4">
+        <div class="flex items-center gap-3">
+            <div class="w-12 h-12 rounded-xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center glow-cyan">
+                <i class="fa-solid font-bold text-2xl text-slate-950 fa-atom animate-spin-slow"></i>
+            </div>
+            <div>
+                <h1 class="text-2xl md:text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-400 font-orbitron tracking-wide">
+                    ATOMIC SIMULATOR
+                </h1>
+                <p class="text-xs text-slate-400">محاكي التوزيع الإلكتروني والجدول الدوري (الأنماط من Z=1 إلى Z=18)</p>
+            </div>
+        </div>
+
+        <!-- Connection Status Indicator -->
+        <div class="flex items-center gap-4 bg-slate-900/80 px-4 py-2 rounded-full border border-cyan-500/20">
+            <div class="flex items-center gap-2">
+                <span class="relative flex h-3 w-3">
+                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                </span>
+                <span class="text-xs font-semibold text-emerald-400">ESP32 / Arduino (Port: 41, 42)</span>
+            </div>
+            <span class="text-slate-600">|</span>
+            <span class="text-xs text-slate-400 font-orbitron">Baud: 115200</span>
+        </div>
+    </header>
+
+    <!-- Main Content Grid -->
+    <main class="max-w-7xl w-full mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6 flex-grow">
+
+        <!-- Left Column: Controls & Hardware Monitor (5 Cols) -->
+        <div class="lg:col-span-5 flex flex-col gap-6">
+            
+            <!-- Input Control Card -->
+            <div class="bg-atomCard rounded-2xl p-5 border border-cyan-500/20 shadow-xl relative overflow-hidden">
+                <div class="absolute -top-10 -left-10 w-32 h-32 bg-cyan-500/10 rounded-full blur-2xl"></div>
+                <h2 class="text-lg font-bold text-cyan-300 mb-4 flex items-center gap-2">
+                    <i class="fa-solid fa-terminal text-sm"></i> وحدة إدخال البيانات
+                </h2>
+                
+                <form id="inputForm" class="space-y-4" onsubmit="event.preventDefault(); handleSend();">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">أدخل العدد الذري (1-18) أو الرمز الكيميائي (C, Na, H...):</label>
+                        <div class="flex gap-2">
+                            <input type="text" id="userInput" placeholder="مثال: 6 أو C أو Na..." 
+                                class="w-full bg-slate-900/90 border border-slate-700 focus:border-cyan-400 text-cyan-300 placeholder-slate-600 rounded-xl px-4 py-2.5 outline-none transition duration-200 text-lg font-semibold dir-ltr">
+                            <button type="submit" 
+                                class="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-bold px-6 py-2.5 rounded-xl transition duration-200 flex items-center justify-center glow-cyan">
+                                إرسال
+                            </button>
+                        </div>
+                    </div>
+                </form>
+
+                <!-- Quick Buttons -->
+                <div class="mt-4">
+                    <label class="block text-xs text-slate-400 mb-2">عناصر سريعة الاختيار:</label>
+                    <div class="flex flex-wrap gap-2" id="quickButtons">
+                        <!-- Populated by JavaScript -->
+                    </div>
+                </div>
+
+                <div class="mt-4 pt-3 border-t border-slate-800 flex justify-between">
+                    <button onclick="powerOff()" class="bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 text-xs font-bold px-4 py-2 rounded-lg border border-rose-500/30 transition flex items-center gap-2">
+                        <i class="fa-solid fa-power-off"></i> إطفاء النظام (OFF)
+                    </button>
+                    <button onclick="randomElement()" class="bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 text-xs font-bold px-4 py-2 rounded-lg border border-indigo-500/30 transition flex items-center gap-2">
+                        <i class="fa-solid fa-shuffle"></i> عنصر عشوائي
+                    </button>
+                </div>
+            </div>
+
+            <!-- Virtual LCD Display (LiquidCrystal_I2C 16x2) -->
+            <div class="bg-atomCard rounded-2xl p-5 border border-cyan-500/20 shadow-xl">
+                <h2 class="text-lg font-bold text-cyan-300 mb-3 flex items-center gap-2">
+                    <i class="fa-solid fa-tv text-sm"></i> شاشة LCD 16x2 (I2C 0x27)
+                </h2>
+                
+                <!-- LCD Screen Box -->
+                <div class="lcd-screen rounded-xl p-4 tracking-widest leading-tight select-none">
+                    <div id="lcdLine1" class="h-6 font-bold text-lg flex items-center overflow-hidden whitespace-pre">System Powered</div>
+                    <div id="lcdLine2" class="h-6 font-bold text-lg flex items-center overflow-hidden whitespace-pre">       OFF       </div>
+                </div>
+                <div class="flex justify-between items-center text-[10px] text-slate-500 mt-2 font-mono">
+                    <span>SDA Pin: 41</span>
+                    <span>SCL Pin: 42</span>
+                    <span>Address: 0x27</span>
+                </div>
+            </div>
+
+            <!-- Serial Monitor Console -->
+            <div class="bg-atomCard rounded-2xl p-5 border border-cyan-500/20 shadow-xl flex flex-col h-48">
+                <div class="flex justify-between items-center mb-2">
+                    <h2 class="text-sm font-bold text-slate-300 flex items-center gap-2">
+                        <i class="fa-solid fa-square-terminal text-cyan-400"></i> Serial Monitor
+                    </h2>
+                    <button onclick="clearSerial()" class="text-[11px] text-slate-500 hover:text-slate-300">مسح السجل</button>
+                </div>
+                <div id="serialLog" class="bg-slate-950 rounded-xl p-3 font-mono text-xs text-emerald-400 overflow-y-auto flex-grow space-y-1 dir-ltr text-left border border-slate-900">
+                    <div>==================================================</div>
+                    <div> نظام محاكاة الجدول الدوري والتوزيع الإلكتروني (1-18)</div>
+                    <div>==================================================</div>
+                    <div>أدخل العدد الذري (1-18) أو الرمز الكيميائي (مثل C أو Na):</div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Right Column: Atomic Visualization & LEDs (7 Cols) -->
+        <div class="lg:col-span-7 flex flex-col gap-6">
+
+            <!-- Atom Visualization Canvas / Graphical Board -->
+            <div class="bg-atomCard rounded-2xl p-6 border border-cyan-500/20 shadow-xl flex flex-col items-center justify-center relative min-h-[340px]">
+                
+                <!-- Background Glow -->
+                <div class="absolute inset-0 bg-gradient-to-b from-cyan-500/5 to-transparent rounded-2xl pointer-events-none"></div>
+
+                <!-- Element Info Overlay Card -->
+                <div class="absolute top-4 right-4 bg-slate-900/90 border border-slate-700/60 rounded-xl p-3 text-right shadow-lg backdrop-blur-md">
+                    <div class="text-xs text-slate-400">العنصر النشط:</div>
+                    <div id="infoName" class="text-lg font-extrabold text-cyan-300">-</div>
+                    <div class="flex items-center gap-2 mt-1">
+                        <span id="infoZ" class="text-xs bg-cyan-950 text-cyan-400 px-2 py-0.5 rounded border border-cyan-800">Z = 0</span>
+                        <span id="infoSymbol" class="text-xs font-bold text-pink-400 font-orbitron">[-]</span>
+                    </div>
+                </div>
+
+                <!-- Atomic Orbital Visual Container -->
+                <div class="relative w-64 h-64 flex items-center justify-center my-4">
+                    <!-- Orbits Rings -->
+                    <div id="orbitK" class="orbit-ring w-28 h-28 border-cyan-400/40 transition-all duration-500"></div>
+                    <div id="orbitL" class="orbit-ring w-44 h-44 border-blue-400/30 transition-all duration-500"></div>
+                    <div id="orbitM" class="orbit-ring w-60 h-60 border-purple-400/20 transition-all duration-500"></div>
+
+                    <!-- Nucleus -->
+                    <div id="nucleus" class="w-14 h-14 rounded-full bg-gradient-to-tr from-pink-500 to-rose-400 flex flex-col items-center justify-center z-10 shadow-lg shadow-pink-500/30 transition-transform duration-300">
+                        <span id="nucleusZ" class="text-xs font-black text-slate-950 font-orbitron">P:0</span>
+                        <span id="nucleusSymbol" class="text-[10px] font-bold text-slate-900 font-orbitron">-</span>
+                    </div>
+
+                    <!-- Electrons Container -->
+                    <div id="electronsLayer" class="absolute inset-0 pointer-events-none"></div>
+                </div>
+
+                <!-- Shell Configuration Display Footer -->
+                <div class="w-full flex justify-center gap-4 mt-2">
+                    <div class="bg-slate-900/80 border border-cyan-500/30 px-3 py-1.5 rounded-lg text-center">
+                        <span class="text-[10px] block text-slate-400">الغلاف K (Max 2)</span>
+                        <span id="shellK" class="font-bold text-cyan-400 font-orbitron text-sm">0</span>
+                    </div>
+                    <div class="bg-slate-900/80 border border-blue-500/30 px-3 py-1.5 rounded-lg text-center">
+                        <span class="text-[10px] block text-slate-400">الغلاف L (Max 8)</span>
+                        <span id="shellL" class="font-bold text-blue-400 font-orbitron text-sm">0</span>
+                    </div>
+                    <div class="bg-slate-900/80 border border-purple-500/30 px-3 py-1.5 rounded-lg text-center">
+                        <span class="text-[10px] block text-slate-400">الغلاف M (Max 8)</span>
+                        <span id="shellM" class="font-bold text-purple-400 font-orbitron text-sm">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- LED Hardware Emulation Board (Pins 1-18) -->
+            <div class="bg-atomCard rounded-2xl p-6 border border-cyan-500/20 shadow-xl">
+                <div class="flex justify-between items-center mb-4">
+                    <div>
+                        <h2 class="text-lg font-bold text-cyan-300 flex items-center gap-2">
+                            <i class="fa-solid fa-lightbulb text-sm"></i> المصابيح التراكمية (Cumulative LEDs)
+                        </h2>
+                        <p class="text-xs text-slate-400">تضيء المصابيح من 1 حتى Z حسب الطرف المخصص (orderedPins)</p>
+                    </div>
+                    <span id="ledCountBadge" class="bg-cyan-950 border border-cyan-800 text-cyan-400 text-xs px-3 py-1 rounded-full font-mono">
+                        المضيئة: 0 / 18
+                    </span>
+                </div>
+
+                <!-- LED Grid Simulation -->
+                <div class="grid grid-cols-6 sm:grid-cols-9 gap-3 bg-slate-950 p-4 rounded-xl border border-slate-900" id="ledGrid">
+                    <!-- Populated dynamically by JS -->
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- Periodic Table Mini Viewer / Legend Footer -->
+    <footer class="max-w-7xl w-full mx-auto mt-6 bg-atomCard rounded-xl p-4 border border-cyan-500/10 flex flex-col md:flex-row justify-between items-center text-xs text-slate-400 gap-3">
+        <div class="flex items-center gap-2">
+            <i class="fa-solid fa-circle-info text-cyan-400"></i>
+            <span>المشروع يستخدم مصفوفة الأطراف `orderedPins[18]` وتوصيل الشاشة بروتوكول I2C على الطرفين (41, 42).</span>
+        </div>
+        <div class="font-orbitron text-slate-500">
+            ELECTRONIC CONFIGURATION ARDUINO PROJECT &copy; 2026
+        </div>
+    </footer>
+
+    <!-- JavaScript Simulation Engine -->
+    <script>
+        // العناصر 18 كاملة المطابقة للكود البرمجي
+        const elements = [
+            { nameEn: "Hydrogen",  nameAr: "الهيدروجين", symbol: "H",  z: 1,  config: "K: 1",            k: 1, l: 0, m: 0 },
+            { nameEn: "Helium",    nameAr: "الهيليوم",   symbol: "He", z: 2,  config: "K: 2",            k: 2, l: 0, m: 0 },
+            { nameEn: "Lithium",   nameAr: "الليثيوم",   symbol: "Li", z: 3,  config: "K:2, L:1",        k: 2, l: 1, m: 0 },
+            { nameEn: "Beryllium", nameAr: "البيريليوم", symbol: "Be", z: 4,  config: "K:2, L:2",        k: 2, l: 2, m: 0 },
+            { nameEn: "Boron",     nameAr: "البورون",    symbol: "B",  z: 5,  config: "K:2, L:3",        k: 2, l: 3, m: 0 },
+            { nameEn: "Carbon",    nameAr: "الكربون",    symbol: "C",  z: 6,  config: "K:2, L:4",        k: 2, l: 4, m: 0 },
+            { nameEn: "Nitrogen",  nameAr: "النيتروجين", symbol: "N",  z: 7,  config: "K:2, L:5",        k: 2, l: 5, m: 0 },
+            { nameEn: "Oxygen",    nameAr: "الأكسجين",   symbol: "O",  z: 8,  config: "K:2, L:6",        k: 2, l: 6, m: 0 },
+            { nameEn: "Fluorine",  nameAr: "الفلور",     symbol: "F",  z: 9,  config: "K:2, L:7",        k: 2, l: 7, m: 0 },
+            { nameEn: "Neon",      nameAr: "النيون",     symbol: "Ne", z: 10, config: "K:2, L:8",        k: 2, l: 8, m: 0 },
+            { nameEn: "Sodium",    nameAr: "الصوديوم",   symbol: "Na", z: 11, config: "K:2, L:8, M:1",   k: 2, l: 8, m: 1 },
+            { nameEn: "Magnesium", nameAr: "الماغنيسيوم",symbol: "Mg", z: 12, config: "K:2, L:8, M:2",   k: 2, l: 8, m: 2 },
+            { nameEn: "Aluminum",  nameAr: "الألومنيوم", symbol: "Al", z: 13, config: "K:2, L:8, M:3",   k: 2, l: 8, m: 3 },
+            { nameEn: "Silicon",   nameAr: "السيليكون",  symbol: "Si", z: 14, config: "K:2, L:8, M:4",   k: 2, l: 8, m: 4 },
+            { nameEn: "Phosphorus",nameAr: "الفوسفور",   symbol: "P",  z: 15, config: "K:2, L:8, M:5",   k: 2, l: 8, m: 5 },
+            { nameEn: "Sulfur",    nameAr: "الكبريت",    symbol: "S",  z: 16, config: "K:2, L:8, M:6",   k: 2, l: 8, m: 6 },
+            { nameEn: "Chlorine",  nameAr: "الكلور",     symbol: "Cl", z: 17, config: "K:2, L:8, M:7",   k: 2, l: 8, m: 7 },
+            { nameEn: "Argon",     nameAr: "الأرجون",    symbol: "Ar", z: 18, config: "K:2, L:8, M:8",   k: 2, l: 8, m: 8 }
+        ];
+
+        // مصفوفة LED Hardware mapping المطابقة للكود
+        const orderedPins = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18];
+        const ledMappingInfo = [9, 10, 8, 1, 2, 4, 5, 7, 3, 6, 12, 13, 15, 17, 11, 14, 16, 18];
+
+        let currentZ = 0;
+
+        // تهيئة الواجهة عند التحميل
+        window.onload = function() {
+            renderLEDs();
+            renderQuickButtons();
+        };
+
+        // رسم شريحة اللمبات LEDs
+        function renderLEDs() {
+            const grid = document.getElementById('ledGrid');
+            grid.innerHTML = '';
+            
+            for (let i = 0; i < 18; i++) {
+                const pinNum = orderedPins[i];
+                const ledHardwareId = ledMappingInfo[i];
+                
+                const ledItem = document.createElement('div');
+                ledItem.className = 'flex flex-col items-center gap-1.5 p-2 rounded-xl bg-slate-900 border border-slate-800 transition duration-300';
+                ledItem.id = `led-container-${i}`;
+                
+                ledItem.innerHTML = `
+                    <div id="led-bulb-${i}" class="w-6 h-6 rounded-full led-off transition-all duration-300"></div>
+                    <span class="text-[10px] font-mono text-slate-400">Z=${i+1}</span>
+                    <span class="text-[9px] font-mono text-slate-500">P:${pinNum}</span>
+                `;
+                grid.appendChild(ledItem);
+            }
+        }
+
+        // رسم أزرار الاختيار السريع
+        function renderQuickButtons() {
+            const container = document.getElementById('quickButtons');
+            const samples = [1, 2, 6, 8, 10, 11, 17, 18]; // H, He, C, O, Ne, Na, Cl, Ar
+            
+            samples.forEach(z => {
+                const elem = elements[z-1];
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.onclick = () => selectZ(z);
+                btn.className = 'bg-slate-800 hover:bg-cyan-950 hover:border-cyan-500 border border-slate-700 text-slate-200 text-xs px-3 py-1.5 rounded-lg transition font-mono flex items-center gap-1';
+                btn.innerHTML = `<span class="font-bold text-cyan-400">${elem.symbol}</span> <span class="text-[10px] text-slate-400">(${z})</span>`;
+                container.appendChild(btn);
+            });
+        }
+
+        // تحليل المدخلات (parseInput)
+        function parseInput(inputStr) {
+            const trimmed = inputStr.trim();
+            const z = parseInt(trimmed);
+            if (!isNaN(z) && z >= 1 && z <= 18) {
+                return z;
+            }
+
+            const lower = trimmed.toLowerCase();
+            for (let i = 0; i < elements.length; i++) {
+                if (elements[i].symbol.toLowerCase() === lower || elements[i].nameEn.toLowerCase() === lower) {
+                    return i + 1;
+                }
+            }
+            return 0;
+        }
+
+        // معالجة الإدخال عند الضغط على إرسال
+        function handleSend() {
+            const inputVal = document.getElementById('userInput').value;
+            if (inputVal.trim().toLowerCase() === 'off' || inputVal.trim() === '0') {
+                powerOff();
+                document.getElementById('userInput').value = '';
+                return;
+            }
+
+            const z = parseInput(inputVal);
+            if (z >= 1 && z <= 18) {
+                selectZ(z);
+            } else {
+                appendSerial('! خطأ: المدخل غير معروف. يرجى إدخال رقم (1-18) أو رمز كيميائي صحيح.');
+            }
+            document.getElementById('userInput').value = '';
+        }
+
+        // اختيار عنصر وتطبيق التغييرات
+        function selectZ(z) {
+            currentZ = z;
+            const elem = elements[z - 1];
+
+            // 1. تحديث المصابيح LED
+            setExactCumulative(z);
+
+            // 2. تحديث شاشة LCD
+            updateLCD(elem);
+
+            // 3. تحديث العرض الذري ثلاثي الأبعاد/المدارات
+            updateAtomVisual(elem);
+
+            // 4. طباعة السجل في Serial Monitor
+            logSerialOutput(elem);
+        }
+
+        // دالة setExactCumulative
+        function setExactCumulative(z) {
+            for (let i = 0; i < 18; i++) {
+                const bulb = document.getElementById(`led-bulb-${i}`);
+                if (i < z) {
+                    bulb.className = 'w-6 h-6 rounded-full led-on transition-all duration-300';
+                } else {
+                    bulb.className = 'w-6 h-6 rounded-full led-off transition-all duration-300';
+                }
+            }
+            document.getElementById('ledCountBadge').innerText = `المضيئة: ${z} / 18`;
+        }
+
+        // دالة updateLCD
+        function updateLCD(elem) {
+            // السطر الأول: Z:x Sym:Sy
+            let line1 = `Z:${elem.z}`;
+            while (line1.length < 7) line1 += ' ';
+            line1 += `Sym:${elem.symbol}`;
+            while (line1.length < 16) line1 += ' ';
+
+            // السطر الثاني: K:x, L:y...
+            let line2 = elem.config;
+            while (line2.length < 16) line2 += ' ';
+
+            document.getElementById('lcdLine1').innerText = line1.substring(0, 16);
+            document.getElementById('lcdLine2').innerText = line2.substring(0, 16);
+        }
+
+        // تحديث الرسوم الذرية والمدارات
+        function updateAtomVisual(elem) {
+            document.getElementById('infoName').innerText = elem.nameAr;
+            document.getElementById('infoZ').innerText = `Z = ${elem.z}`;
+            document.getElementById('infoSymbol').innerText = `[${elem.symbol}]`;
+
+            document.getElementById('nucleusZ').innerText = `P:${elem.z}`;
+            document.getElementById('nucleusSymbol').innerText = elem.symbol;
+
+            document.getElementById('shellK').innerText = elem.k;
+            document.getElementById('shellL').innerText = elem.l;
+            document.getElementById('shellM').innerText = elem.m;
+
+            // رسم الإلكترونات في المدارات
+            const layer = document.getElementById('electronsLayer');
+            layer.innerHTML = '';
+
+            // مدار K (شعاع 56px)
+            createOrbitElectrons(layer, elem.k, 56, '#00f2fe');
+            // مدار L (شعاع 88px)
+            createOrbitElectrons(layer, elem.l, 88, '#60a5fa');
+            // مدار M (شعاع 120px)
+            createOrbitElectrons(layer, elem.m, 120, '#c084fc');
+        }
+
+        function createOrbitElectrons(container, count, radius, color) {
+            for (let i = 0; i < count; i++) {
+                const angle = (i / count) * (2 * Math.PI);
+                const x = Math.cos(angle) * radius;
+                const y = Math.sin(angle) * radius;
+
+                const e = document.createElement('div');
+                e.className = 'absolute w-3 h-3 rounded-full transition-all duration-500 shadow-md';
+                e.style.backgroundColor = color;
+                e.style.boxShadow = `0 0 8px ${color}`;
+                e.style.top = `calc(50% + ${y}px - 6px)`;
+                e.style.left = `calc(50% + ${x}px - 6px)`;
+
+                container.appendChild(e);
+            }
+        }
+
+        // إطفاء النظام OFF
+        function powerOff() {
+            currentZ = 0;
+            setExactCumulative(0);
+
+            // LCD Off State
+            document.getElementById('lcdLine1').innerText = "System Powered  ";
+            document.getElementById('lcdLine2').innerText = "       OFF      ";
+
+            // Visual Reset
+            document.getElementById('infoName').innerText = "مطفي";
+            document.getElementById('infoZ').innerText = "Z = 0";
+            document.getElementById('infoSymbol').innerText = "[-]";
+            document.getElementById('nucleusZ').innerText = "P:0";
+            document.getElementById('nucleusSymbol').innerText = "-";
+            document.getElementById('shellK').innerText = "0";
+            document.getElementById('shellL').innerText = "0";
+            document.getElementById('shellM').innerText = "0";
+            document.getElementById('electronsLayer').innerHTML = '';
+
+            appendSerial("-> تم إطفاء جميع المصابيح والشاشة.");
+        }
+
+        // عنصر عشوائي
+        function randomElement() {
+            const randZ = Math.floor(Math.random() * 18) + 1;
+            selectZ(randZ);
+        }
+
+        // طباعة مخرجات السيريال
+        function logSerialOutput(elem) {
+            appendSerial("--------------------------------------------------");
+            appendSerial(` العنصر: ${elem.nameAr} (${elem.symbol}) | Z = ${elem.z}`);
+            appendSerial(` التوزيع الإلكتروني: ${elem.config}`);
+            appendSerial(` حالة اللمبات: تم إضاءة المصابيح من 1 إلى ${elem.z} وباقي المصابيح LOW تماماً.`);
+        }
+
+        function appendSerial(text) {
+            const log = document.getElementById('serialLog');
+            const line = document.createElement('div');
+            line.innerText = text;
+            log.appendChild(line);
+            log.scrollTop = log.scrollHeight;
+        }
+
+        function clearSerial() {
+            document.getElementById('serialLog').innerHTML = '';
+        }
+    </script>
+</body>
+</html>
